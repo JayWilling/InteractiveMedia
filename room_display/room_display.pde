@@ -73,11 +73,11 @@ void draw() {
   background(255, 255, 255);
   //backgroun colour base on time
   if (clock[0] >= 5 && clock[0] <= 11) //morning
-    background(#FF904B);
+    background(#FF904B, clock[1]*3);
   if (clock[0] >= 12 && clock[0] <=17) //day
-    background(#9BDCE8);
+    background(#9BDCE8, clock[1]*3);
   if (clock[0] >=18 || clock[0] <= 5) //night
-    background(#A0A0A0);
+    background(#A0A0A0, 0);
   fill(50);
   textSize(32);
   text("People: " + room.getSize(), 50, 50);
@@ -186,7 +186,7 @@ class Room { // Used to draw out the room for a given dataset
     //classroom picture when u hover pointer inside box
     if (mouseX >= ((width - roomWidth) / 2) && mouseX <= ((width - roomWidth) / 2 + roomWidth) &&
         mouseY >= ((height - roomHeight) / 2) && mouseY <= ((height - roomHeight) / 2 + roomHeight)){
-      PImage img = loadImage("classroom.jpg");
+      PImage img = loadImage("classroom.png");
       image(img, (width - roomWidth) / 2, (height - roomHeight) / 2, roomWidth, roomHeight);
     }
     
