@@ -175,6 +175,14 @@ class Room { // Used to draw out the room for a given dataset
     vertex((width - roomWidth) / 2, (height - roomHeight) / 2 + roomHeight); // Lower left
     vertex(xRange.y, yRange.y); // Lower right
     endShape();
+    
+    //classroom picture
+    if (mouseX >= ((width - roomWidth) / 2) && mouseX <= ((width - roomWidth) / 2 + roomWidth) &&
+        mouseY >= ((height - roomHeight) / 2) && mouseY <= ((height - roomHeight) / 2 + roomHeight)){
+      PImage img = loadImage("classroom.jpg");
+      image(img, (width - roomWidth) / 2, (height - roomHeight) / 2, roomWidth, roomHeight);
+    }
+    
   }
   
   void addPerson() {
