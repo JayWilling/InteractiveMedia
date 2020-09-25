@@ -58,21 +58,23 @@ void draw() {
     translate(offset, 0);
   }
   
-  if (clock[0] == 24) {
+  if (clock[0] >= 24) {
     clock[0] = 0;
-  } else if(clock[1] == 60) {
+  }
+  if(clock[1] >= 60) {
     clock[1] = 0;
     clock[0]++;
-  } else if(clock[2] == 60) {
+  }
+  if(clock[2] >= 60) {
     clock[2] = 0;
     clock[1]++;
   }
   clock[2] += 3;
-  background(255);
+  background(255, 255, 255);
   fill(50);
   textSize(32);
   text("People: " + room.getSize(), 50, 50);
-  text(clock[0] + ":" + clock[1] + ":" + clock[2], 50, 100);
+  text("Time: " + clock[0] + ":" + clock[1] + ":" + clock[2], 50, 100);
   text("Sensor: " + currentSensor, width - 300, 50);
   text("To change sensors, press a number 1 - 9 on your keyboard.", 50, height - 50);
   fill(255);
@@ -80,13 +82,17 @@ void draw() {
     timer++;
   } else {
     timer = 0;
-    //int addPeople = peopleCounterIn.getInt(counterIndex, 1);
-    //int removePeople = peopleCounterOut.getInt(counterIndex, 1);
-    int addPeople = 5;
-    int removePeople = 10;
+    int addPeople = peopleCounterIn.getInt(counterIndex, 1);
+    int removePeople = peopleCounterOut.getInt(counterIndex, 1);
+    System.out.println(addPeople);
+    System.out.println(removePeople);
+    //int addPeople = 5;
+    //int removePeople = 10;
     if (room.getSize() - removePeople <= 0) { // We do not want to have a negative number of people in the room;
       removePeople = room.getSize();
     }
+    System.out.println(removePeople);
+    System.out.println("");
     
     
     for (int i = 0; i <= addPeople; i++) {
@@ -95,6 +101,7 @@ void draw() {
     for (int i = 0; i <= removePeople; i++) {
       room.removePerson();
     }
+    System.out.println("");
     counterIndex++;
   }
   room.run();
@@ -187,8 +194,9 @@ class Room { // Used to draw out the room for a given dataset
     for (int i = 0; i <= attendanceList.size(); i++) {
       // Finding the next person in the list to be removed from the room
       Person p = attendanceList.get(i);
-      if (!p.isLeaving && !p.hasLeft) {
-        p.setIsLeaving();
+      if (p.goalState != 2) {
+        p.goalState = 2;
+        System.out.println("leaving");
         break;
       } else if(p.hasLeft) {
         attendanceList.remove(i);
@@ -481,15 +489,6 @@ public class Person { // Person has a goal location, current location, and time 
   
   void setHasLeft() {
     hasLeft = true;
-  }
-  
-  PVector getLocation() {
-    return location;
-  }
-  
-  boolean isLeaving() {
-    goalState = 2;
-    return isLeaving;
   }
   
   boolean hasLeft() {
