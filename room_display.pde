@@ -3,11 +3,15 @@
 import java.util.LinkedList;
 import java.util.Queue;
 
+boolean changing = false;
+String[] sensorList = {"PC00.05", "PC00.06", "PC00.07", "PC00.08", "PC00.09", "PC01.11", "PC01.12", "PC01.13", "PC02.14"};
+String currentSensor;
 Table peopleCounterIn; //http://eif-research.feit.uts.edu.au/api/csv/?rFromDate=2020-09-09T19%3A58%3A06&rToDate=2020-09-13T19%3A58%3A06&rFamily=people&rSensor=+PC00.05+%28In%29
 Table peopleCounterOut; //http://eif-research.feit.uts.edu.au/api/csv/?rFromDate=2020-09-09T19%3A58%3A06&rToDate=2020-09-13T19%3A58%3A06&rFamily=people&rSensor=+PC00.05+%28Out%29
 String[] dateTime;
 String[] initialTime;
 int[] clock = {0, 0, 0};
+int offset = 0;
 
 Room room;
 
@@ -16,6 +20,7 @@ void setup() {
   
   peopleCounterIn = loadTable("http://eif-research.feit.uts.edu.au/api/csv/?rFromDate=2020-09-09T19%3A58%3A06&rToDate=2020-09-13T19%3A58%3A06&rFamily=people&rSensor=+PC00.05+%28In%29", "csv");
   peopleCounterOut = loadTable("http://eif-research.feit.uts.edu.au/api/csv/?rFromDate=2020-09-09T19%3A58%3A06&rToDate=2020-09-13T19%3A58%3A06&rFamily=people&rSensor=+PC00.05+%28Out%29", "csv");
+  currentSensor = "PC00.05";
   
   room = new Room();
   for (int i = 0; i < peopleCounterIn.getInt(0, 1); i++) {
@@ -41,6 +46,18 @@ int removePeople = 0;
 
 
 void draw() {
+  if (changing && offset >= -40 && offset < 0) {
+    offset = 0;
+    changing = false;
+  } else if (changing && offset <= width) {
+    translate(offset, 0);
+    offset += 20;
+  
+  } else if (changing && offset > width) {
+    offset *= -1;
+    translate(offset, 0);
+  }
+  
   if (clock[0] == 24) {
     clock[0] = 0;
   } else if(clock[1] == 60) {
@@ -54,18 +71,21 @@ void draw() {
   background(255);
   fill(50);
   textSize(32);
-  //textAlign(RIGHT, BOTTOM);
   text("People: " + room.getSize(), 50, 50);
   text(clock[0] + ":" + clock[1] + ":" + clock[2], 50, 100);
+  text("Sensor: " + currentSensor, width - 300, 50);
+  text("To change sensors, press a number 1 - 9 on your keyboard.", 50, height - 50);
   fill(255);
   if(timer < 600) {
     timer++;
-  } else if (timer >= 600) {
+  } else {
     timer = 0;
-    int addPeople = peopleCounterIn.getInt(counterIndex, 1);
-    int removePeople = peopleCounterOut.getInt(counterIndex, 1);
+    //int addPeople = peopleCounterIn.getInt(counterIndex, 1);
+    //int removePeople = peopleCounterOut.getInt(counterIndex, 1);
+    int addPeople = 5;
+    int removePeople = 10;
     if (room.getSize() - removePeople <= 0) { // We do not want to have a negative number of people in the room;
-      removePeople = 0;
+      removePeople = room.getSize();
     }
     
     
@@ -81,13 +101,13 @@ void draw() {
 }
 
 class Room { // Used to draw out the room for a given dataset
-  ArrayList<Person> attendanceList; // I have used an array list to represent the attendance list, however a queue may be required instead.
+  LinkedList<Person> attendanceList; // I have used an array list to represent the attendance list, however a queue may be required instead.
   // We need a data type that allows us to remove the oldest element (without creating empty spaces) whilst also being able to index the elements so each person can be drawn.
   int roomWidth;
   int roomHeight;
   int doorWidth;
   //int[] roomOrigin = {0, 0};
-  ArrayList<int[]> walls; // This will be passed to each person of the room, letting them know when they have collided with a wall
+  LinkedList<int[]> walls; // This will be passed to each person of the room, letting them know when they have collided with a wall
   // Providing each person with three goal locations (Entrance doorway, room centre, and exit doorway) saves us requiring a path finding algorithm
   PVector roomCentre;
   PVector entrance;
@@ -108,19 +128,20 @@ class Room { // Used to draw out the room for a given dataset
     xRange = new PVector((width - roomWidth) / 2, (width - roomWidth) / 2 + roomWidth);
     yRange = new PVector((height - roomHeight) / 2, (height - roomHeight) / 2 + roomHeight);
     
-    walls = new ArrayList<int[]>();
-    attendanceList = new ArrayList<Person>();
+    walls = new LinkedList<int[]>();
+    attendanceList = new LinkedList<Person>();
   }
   
   // Imagine this function as checking the attendance. If there are people in the room, we render there position
   // If a person is no longer in the room, we remove them from the list.
   void run() {
     render();
+    
     for (int i = attendanceList.size()-1; i >= 0; i--) {
       Person p = attendanceList.get(i);
       p.run(attendanceList);
       if (p.hasLeft()) {
-        attendanceList.remove(i);
+        attendanceList.remove(p);
       }
     }
   }
@@ -151,7 +172,7 @@ class Room { // Used to draw out the room for a given dataset
   
   void addPerson() {
     //int[][] goals = {entrance, roomCentre, exit}
-    ArrayList<PVector> goals = new ArrayList<PVector>();
+    LinkedList<PVector> goals = new LinkedList<PVector>();
     PVector roomGoal = new PVector(random(xRange.x, xRange.y), random(yRange.x, yRange.y));
     goals.add(entrance);
     goals.add(roomGoal);
@@ -184,7 +205,7 @@ class Room { // Used to draw out the room for a given dataset
 
 public class Person { // Person has a goal location, current location, and time to live (ttl). ttl is a default count value to prevent people from getting stuck on objects.
 // ttl should count down when people don't move for a time and 'isLeaving' is true. The boolean "isLeaving" changes when the person has been kicked from the room.
-  ArrayList<PVector> goal;
+  LinkedList<PVector> goal;
   
   int goalState = 0; // potential values are 0, 1 and 2, denoting which goal in the 'goal' array we are approaching.
   PVector location;
@@ -203,7 +224,7 @@ public class Person { // Person has a goal location, current location, and time 
   // Variables for interactive features
   boolean clicked;
   
-  Person(ArrayList<PVector> goals) {
+  Person(LinkedList<PVector> goals) {
     goal = goals;
     location = new PVector(-personWidth, random(0, 1000));
     isLeaving = false;
@@ -218,7 +239,7 @@ public class Person { // Person has a goal location, current location, and time 
     maxforce = 0.03;
   }
   
-  void run(ArrayList<Person> attendanceList) {
+  void run(LinkedList<Person> attendanceList) {
     if (!clicked) {
       crowd(attendanceList);
       update();
@@ -248,7 +269,7 @@ public class Person { // Person has a goal location, current location, and time 
   
   // For ease of reference this function is called 'crowd', and is in essence the same as a 'flock' function.
   // This way from the update function we can look at interactions the person has with the 'crowd' or surrounding environment
-  void crowd(ArrayList<Person> attendanceList) {
+  void crowd(LinkedList<Person> attendanceList) {
     PVector col = new PVector(0, 0);
     PVector pat = new PVector(0, 0);
     
@@ -268,7 +289,7 @@ public class Person { // Person has a goal location, current location, and time 
   // It will not consider the positions of other people however. (If we do want it to consider avoiding
   // other people, we just implement the flocking code provided in other examples).
   // I have added the attendanceList as a parameter in-case we do want some people avoidance going on too.
-  PVector pathFinding(ArrayList<Person> attendanceList) {
+  PVector pathFinding(LinkedList<Person> attendanceList) {
     if (location.y <= goal.get(goalState).y + 20 && location.y >= goal.get(goalState).y - 20 && goalState < 1) {
       goalState++;
     } else if (goalState == 2 && location.y <= goal.get(goalState).y + 20 && location.y >= goal.get(goalState).y - 20) {
@@ -295,7 +316,7 @@ public class Person { // Person has a goal location, current location, and time 
   }
   
   
-  PVector collisions(ArrayList<Person> attendanceList) {
+  PVector collisions(LinkedList<Person> attendanceList) {
     // Check if a person is colliding with another. If they are 'turn' them away slightly.
     // This will not [should not] override the main velocity towards the goal location.
     float desiredseparation = 5.0f;
@@ -481,5 +502,14 @@ void mousePressed() {
     if (mouseX <= p.location.x + p.personWidth && mouseX >= p.location.x - p.personWidth && mouseY <= p.location.y + p.personWidth && mouseY >= p.location.y - p.personWidth) {
       p.clicked = true;
     }
+  }
+}
+
+void keyPressed() {
+  if (key == '1' || key == '2' || key == '3' || key == '4' || key == '5' || key == '6' || key == '7' || key == '8' || key == '9') {
+    changing = true;
+    currentSensor = sensorList[Character.getNumericValue(key) - 1];
+    peopleCounterIn = loadTable("http://eif-research.feit.uts.edu.au/api/csv/?rFromDate=2020-09-09T19%3A58%3A06&rToDate=2020-09-13T19%3A58%3A06&rFamily=people&rSensor=+" + currentSensor + "+%28In%29", "csv");
+    peopleCounterOut = loadTable("http://eif-research.feit.uts.edu.au/api/csv/?rFromDate=2020-09-09T19%3A58%3A06&rToDate=2020-09-13T19%3A58%3A06&rFamily=people&rSensor=+" + currentSensor + "+%28Out%29", "csv");
   }
 }
